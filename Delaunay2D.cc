@@ -1,11 +1,36 @@
+// #include "DelaunayTriangulation2D.hh"
+// #include <queue>
 
+void recursive_flips(std::vector<TriMesh::EdgeHandle> edges, TriMesh * mesh) {
+	std::vector<TriMesh::EdgeHandle> next_edges;
+	for(TriMesh::EdgeHandle edge : edges){
+		if(!mesh->is_boundary(edge) && !is_delaunay(mesh, edge) && mesh -> is_flip_ok(edge)){
+			mesh->flip(edge);
+			TriMesh::HalfedgeHandle heh = mesh->halfedge_handle(edge, 0);
+			next_edges.push_back(mesh->edge_handle(mesh->next_halfedge_handle(heh)));
+			next_edges.push_back(mesh->edge_handle(mesh->next_halfedge_handle(mesh->next_halfedge_handle(heh))));
+			
+			heh = mesh->opposite_halfedge_handle(heh);
+			next_edges.push_back(mesh->edge_handle(mesh->next_halfedge_handle(heh)));
+			next_edges.push_back(mesh->edge_handle(mesh->next_halfedge_handle(mesh->next_halfedge_handle(heh))));
+		}
+	}
 
+	if (next_edges.size() > 0) {
+		recursive_flips(next_edges, mesh);
+	}
+}
 void insert_point(TriMeshObject * _tri_obj, const bool _on_edge, const TriMesh::FaceHandle& _fh,
-    /*
-        Hidden code to add the vertex in the mesh
-    */
+        const TriMesh::EdgeHandle& _eh, const TriMesh::Point& _p, const ACG::Vec4f& _color) {
 
-   
+    // Code to add the point into the mesh and create vertex handle vh 
+
+    // ============================================================================
+    // Exercise 7: Delaunay Triangulation
+    // The task is to re-establish Delaunay property
+    // ... find edges opposite to the inserted vertex
+    // ... are these edges ok? otherwise: flip'em
+    // ============================================================================
     std::vector<TriMesh::EdgeHandle> edges;
     for (TriMesh::VertexFaceIter vf_it = mesh->vf_iter(vh); vf_it.is_valid(); ++vf_it) {
     	for (TriMesh::FaceHalfedgeIter fh_it = mesh->fh_iter(*vf_it); fh_it.is_valid(); ++ fh_it) {
@@ -16,14 +41,12 @@ void insert_point(TriMeshObject * _tri_obj, const bool _on_edge, const TriMesh::
 	}
     }
 
-    for(TriMesh::EdgeHandle edge : edges) {
-    	if(!is_delaunay(mesh, edge) && mesh->is_flip_ok(edge)){
-		mesh->flip(edge);
-	}
-    }
+    recursive_flips(edges, mesh);
 
     mesh->garbage_collection();
 }
+
+
 
 TriMesh::Point get_point_on_paraboloid(TriMesh::Point point) {
 	double x = point[0];
@@ -49,6 +72,7 @@ bool is_delaunay(TriMesh * _mesh, TriMesh::EdgeHandle _eh) {
         return false;
     }
     bool result = true;
+
     // Get half edge corresponding to the edge _eh
     TriMesh::HalfedgeHandle heh = _mesh->halfedge_handle(_eh, 0);
 	
